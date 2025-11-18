@@ -1,48 +1,49 @@
 """
-Database Schemas
+Database Schemas for the Animation AI app
 
-Define your MongoDB collection schemas here using Pydantic models.
-These schemas are used for data validation in your application.
-
-Each Pydantic model represents a collection in your database.
-Model name is converted to lowercase for the collection name:
-- User -> "user" collection
-- Product -> "product" collection
-- BlogPost -> "blogs" collection
+Each Pydantic model maps to a MongoDB collection (lowercased class name).
 """
-
+from typing import Optional, Dict, Any, Literal
 from pydantic import BaseModel, Field
-from typing import Optional
 
-# Example schemas (replace with your own):
+class Media(BaseModel):
+    original_filename: str
+    mime_type: str
+    media_type: Literal["image", "video"]
+    storage_path: str = Field(..., description="Server path to the uploaded asset")
+    width: Optional[int] = None
+    height: Optional[int] = None
+    duration: Optional[float] = None
 
-class User(BaseModel):
-    """
-    Users collection schema
-    Collection name: "user" (lowercase of class name)
-    """
-    name: str = Field(..., description="Full name")
-    email: str = Field(..., description="Email address")
-    address: str = Field(..., description="Address")
-    age: Optional[int] = Field(None, ge=0, le=120, description="Age in years")
-    is_active: bool = Field(True, description="Whether user is active")
+class AnimationJob(BaseModel):
+    media_id: str
+    status: Literal["queued", "processing", "completed", "failed"] = "queued"
+    progress: int = 0
+    params: Dict[str, Any] = Field(
+        default_factory=lambda: {
+            "pose": "auto",
+            "expression": "neutral",
+            "style": "original",
+            "background": "keep",
+            "speed": 1.0,
+            "resolution": "1080p",
+            "preserve_likeness": True,
+            "lip_sync": False,
+            "auto_rigging": True,
+            "motion_template": None,
+        }
+    )
+    output: Dict[str, Optional[str]] = Field(
+        default_factory=lambda: {"mp4_url": None, "gif_url": None}
+    )
+    error: Optional[str] = None
 
-class Product(BaseModel):
-    """
-    Products collection schema
-    Collection name: "product" (lowercase of class name)
-    """
-    title: str = Field(..., description="Product title")
-    description: Optional[str] = Field(None, description="Product description")
-    price: float = Field(..., ge=0, description="Price in dollars")
-    category: str = Field(..., description="Product category")
-    in_stock: bool = Field(True, description="Whether product is in stock")
+class ChatMessage(BaseModel):
+    job_id: str
+    role: Literal["user", "assistant"]
+    content: str
 
-# Add your own schemas here:
-# --------------------------------------------------
-
-# Note: The Flames database viewer will automatically:
-# 1. Read these schemas from GET /schema endpoint
-# 2. Use them for document validation when creating/editing
-# 3. Handle all database operations (CRUD) directly
-# 4. You don't need to create any database endpoints!
+class Preset(BaseModel):
+    name: str
+    description: Optional[str] = None
+    params: Dict[str, Any]
